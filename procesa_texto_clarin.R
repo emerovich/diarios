@@ -1,8 +1,4 @@
-#install.packages("tidytext")
-#install.packages("tm")
-#install.packages("gridExtra")
-#install.packages("mudata")
-library(tidyverse)
+#library(tidyverse)
 library(tidytext)
 library(dplyr)
 library(tm)
@@ -25,9 +21,10 @@ clarin$year <- ""
 clarin$month <- ""
 clarin$date <- ""
 
-clarin <- clarin %>% filter(!is.na(Fecha))
+
 
 clarin$Test <- str_length(clarin$Fecha)
+
 
 clarin$date <- if_else(clarin$Test==43, str_sub(clarin$Fecha, 13, -22), 
                         if_else(clarin$Test==44, str_sub(clarin$Fecha, 13, -23), 
@@ -41,58 +38,30 @@ clarin$date <- if_else(clarin$Test==43, str_sub(clarin$Fecha, 13, -22),
                                                                                         if_else(clarin$Test==32, str_sub(clarin$Fecha, 13, -10),
                                                                                                 if_else(clarin$Test==31, str_sub(clarin$Fecha, 13, -10),"")))))))))))
 
-length(which(clarin[,10]==""))
-
-
-#for(i in 1:nrow(clarin)){                              #TODO ESTE BLOQUE YA NO LO CORRO MAS PORQUE LO REEMPLAZE POR LOS IF_ELSE ANIDADOS QUE SON MUCHO MAS RAPIDOS
-  #clarin[i,2] <- gsub("[\r\n]", "", clarin[i,2])
-  #str_replace_all(clarin[i,2], "[\r\n]" , "")
-#  if(str_length(clarin[i,2])==43){
-#    clarin[i,10] <- str_sub(clarin[i,2],13,-22)
-#  } else if(str_length(clarin[i,2])==44){
-#    clarin[i,10] <- str_sub(clarin[i,2],13,-23)
-#  } else if(str_length(clarin[i,2])==29){
-#    clarin[i,10] <- str_sub(clarin[i,2],11,-10)
-#  } else if(str_length(clarin[i,2])==28){
-#    clarin[i,10] <- str_sub(clarin[i,2],11,-9)
-#  } else if(str_length(clarin[i,2])==22){
-#    clarin[i,10] <- str_sub(clarin[i,2],3,-11)
-#  } else if(str_length(clarin[i,2])==24){
-#    clarin[i,10] <- str_sub(clarin[i,2],5,-11)
-#  } else if(str_length(clarin[i,2])==23){
-#    clarin[i,10] <- str_sub(clarin[i,2],5,-10)
-#  } else if(str_length(clarin[i,2])==21){
-#    clarin[i,10] <- str_sub(clarin[i,2],3,-10)
-#  } else if(str_length(clarin[i,2])==25){
-#    clarin[i,10] <- str_sub(clarin[i,2],3,-10)
-#  } else if(str_length(clarin[i,2])==32){
-#    clarin[i,10] <- str_sub(clarin[i,2],13,-10)
-#  } else if(str_length(clarin[i,2])==31){
-#    clarin[i,10] <- str_sub(clarin[i,2],13,-10)
-#  } else{
-#    clarin[i,10] <- "NA"
-#  }
-#}
-
-#length(which(clarin[,10]=="NA"))
-#which(clarin[,10]=="NA")
-#12750
-#400
-#220
-#45
-
-
+#length(which(clarin[,10]==""))
 
 clarin$date <-  as.Date(clarin$date, format="%d/%m/%Y")
 
 unicos <- distinct(clarin, Link, .keep_all = TRUE)
 
-#unicos <- unicos[order(as.Date(unicos$date, format="%Y/%m/%d")),]
+#Por algun motivo hay algunos con Test=22 y 24 que les queda mal el date porque el subsetting que hago 
+#con str_sub no se cumple bien para ellos. Eso hace que la columna date quede mal. Por suerte quedan mal 
+#de una manera similar, aparaciendo como que el a帽o tiene tres digitos. Corrijo esto ordenandolo por fecha
+# y separo los anteriores a 1999 para corregirles la fecha y despues volver a unir el data set.
+
+unicos_post_1999 <- unicos %>%
+  filter(date >= "1999-01-01")
+
+unicos_pre_1999 <- unicos %>%
+  filter(date < "1999-01-01")
+
+unicos_pre_1999$date <- if_else(unicos_pre_1999$Test==22, str_sub(unicos_pre_1999$Fecha, 4,-10),
+                                if_else(unicos_pre_1999$Test==22,str_sub(unicos_pre_1999$Fecha, 6, -10),""))
+
+unicos_pre_1999$date <-  as.Date(unicos_pre_1999$date, format="%d/%m/%Y")
+unicos <- rbind(unicos_pre_1999, unicos_post_1999)
 
 unicos <- dplyr::arrange(unicos, date)
-
-unicos <- unicos %>%
-  filter(date >= "2001-01-01")
 
 unicos$month[month(unicos$date) == 1] <- "enero"
 unicos$month[month(unicos$date) == 2] <- "febrero"
@@ -107,9 +76,6 @@ unicos$month[month(unicos$date) == 10] <- "octubre"
 unicos$month[month(unicos$date) == 11] <- "noviembre"
 unicos$month[month(unicos$date) == 12] <- "diciembre"
 
-
-#vector_articulos <- as.character(eleconomista[,7])
-#text_df <- filter(lanacion, Categoria == '\n\r\n                    Econom韆\r\n                \n')
 text_df <- unicos
 
 text_df <- as_tibble(text_df)
@@ -119,8 +85,7 @@ articulos_por_mes <- text_df %>% group_by(month = floor_date(date,"month")) %>% 
 
 ggplot(data = articulos_por_mes, mapping = aes(month, count)) + geom_line()
 
-colnames(text_df)
-
+#Obtengo los tokens a partir del texto en el Cuerpo de las noticias
 tokens_text <- select(text_df, Cuerpo, date) %>%
   unnest_tokens(word, Cuerpo)
 
@@ -135,57 +100,27 @@ tokens_text$month2 <- as.Date(cut(tokens_text$date,
                                   breaks = "month"))
 
 
-#text_df$date[1]
-#grafico dolar
-
-typeof(tokens_text)
-
-test_inflacion <- tokens_text %>%
-  filter(word %in% harvardiv_positividad$palabras) %>%
-  group_by(month2) %>%
-  summarise(word = n())
-
-#frecuencia_de_palabras <- tokens_text %>% group_by(word) %>%
-#  summarise(word_test = n())
-
-
-#inicio1 <- Sys.time()
 #test_inflacion <- tokens_text %>%
-#  filter(word == "inflaci髇") %>%
+#  filter(word %in% harvardiv_positividad$palabras) %>%            #esto lo dejo comentado porque tengo que buscar el dataset harvardiv en el disco rigido externo
 #  group_by(month2) %>%
 #  summarise(word = n())
-#final1 <- Sys.time()
+
+#test_inflacion <- tokens_prueba[word %in% harvardiv_positividad$palabras , .N, by = month2]
 
 tokens_prueba <- setDT(tokens_text)
 
-#inicio2 <- Sys.time()
-test_inflacion <- tokens_prueba[word %in% harvardiv_positividad$palabras , .N, by = month2]
-test_inflacion <- tokens_prueba[word == "pobreza" , .N, by = month2]
-#final2 <- Sys.time()
+test_inflacion <- tokens_prueba[word == "d贸lar" , .N, by = month2]
 
-#print(final1-inicio1)
-#print(final2-inicio2)
+words_per_month_DT <- tokens_prueba[, .N , by = month2]
 
 
-words_per_month <- tokens_text %>%
-  group_by(month2) %>%
-  summarise(word = n())
+words_per_month_DT <- words_per_month_DT[words_per_month_DT$month2 %in% test_inflacion$month2,] #TENGO QUE DEFINIR UN METODO DE IMPUTACION PARA VALORES FALTANTES PARA LA SERIE TEST_INFLACION
 
-words_per_month <- words_per_month[words_per_month$month2 %in% test_inflacion$month2,]
-
-#words_per_month <- words_per_month %>%
-#  filter(month2 != "2014-07-01")
-
-
-
-test_inflacion$cantidad_total_palabras <- words_per_month$word
+test_inflacion$cantidad_total_palabras <- words_per_month_DT$N
 
 test_inflacion$relative_frequency <- test_inflacion$N/test_inflacion$cantidad_total_palabras
 
 test_inflacion$normalizado <- (test_inflacion$relative_frequency - mean(test_inflacion$relative_frequency))/sd(test_inflacion$relative_frequency)
-
-#mean(dolar_normalizado)
-#sd(dolar_normalizado)
 
 ggplot(data = test_inflacion, mapping = aes(month2, normalizado)) + geom_line()
 
@@ -197,7 +132,7 @@ test_dolar_10 <- tokens_text %>%
   summarise(word = n())
 
 #test_grouped_by_month <- tokens_text %>%
-#  filter(word == "d髄ar") %>%
+#  filter(word == "d贸lar") %>%
 #  group_by(month2) %>%
 #  summarise(word = n())
 
@@ -238,8 +173,8 @@ test  %>%
   geom_line() +
   theme(axis.text.x = element_text(angle = 90)) +
   scale_x_date(date_breaks = "1 month", date_labels = "%b %d %y") +
-  ggtitle("Numero de occurencias de la palabra 'd髄ar' en el diario El Economista (01/01/2018 a 15/08/2019)") +
-  labs (x="Fecha",y="ocurrencia de la palabra 'd髄ar'")
+  ggtitle("Numero de occurencias de la palabra 'd贸lar' en el diario El Economista (01/01/2018 a 15/08/2019)") +
+  labs (x="Fecha",y="ocurrencia de la palabra 'd贸lar'")
 
 
 tc$fecha <-  as.Date(as.character(tc$fecha), format="%d/%m/%Y")
@@ -261,13 +196,13 @@ p2 <- test  %>%
   geom_line() +
   theme(axis.text.x = element_text(angle = 90)) +
   scale_x_date(date_breaks = "1 week", date_labels = "%b %d %y") +
-  ggtitle("Numero de occurencias de la palabra 'd髄ar' en el diario El Economista (01/01/2018 a 15/08/2019)") +
-  labs (x="Fecha",y="ocurrencia de la palabra 'd髄ar'")
+  ggtitle("Numero de occurencias de la palabra 'd贸lar' en el diario El Economista (01/01/2018 a 15/08/2019)") +
+  labs (x="Fecha",y="ocurrencia de la palabra 'd贸lar'")
 
 grid.arrange(p1, p2, nrow = 2)
   
 tokens_text %>%
-  filter(word == "d髄ar") %>%
+  filter(word == "d贸lar") %>%
   group_by(date) %>%
   summarise(word = n()) %>%
   ggplot(aes(x = date, y = word, group = 1)) +
@@ -279,7 +214,7 @@ tokens_text %>%
 
 
 inflacion_por_mes <- tokens_text %>%
-  filter(word == "inflaci髇") %>%
+  filter(word == "inflaci贸n") %>%
   #filter(year == 2019) %>%
   group_by(month2) %>%
   summarise(word = n()) 
@@ -303,7 +238,7 @@ inflacion_por_mes %>%  #
   geom_point()
 
 
-inflacion_por_mes %>%  #ACA ESTOY GRAFICANDO LA INFLACION PONDERADA POR EL NUMERO DE ARTICULOS POR MES. EL PROBLEMA ES QUE EL NUMERO DE ARTICULOS CRECE MUCHO EN LOS ULTIMOS TRES A袿S
+inflacion_por_mes %>%  #ACA ESTOY GRAFICANDO LA INFLACION PONDERADA POR EL NUMERO DE ARTICULOS POR MES. EL PROBLEMA ES QUE EL NUMERO DE ARTICULOS CRECE MUCHO EN LOS ULTIMOS TRES A脩OS
   #rename("month"="as.factor(month)") %>%
   ggplot(aes(x = month2, y = infla_ajustada, group=1)) +
   geom_line() +
