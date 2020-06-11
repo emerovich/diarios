@@ -8,6 +8,8 @@ library(gridExtra)
 library(stringr)
 library(data.table)
 
+memory.limit(size=10000)
+
 #clarin <- backup
 
 #tc <- read_csv("D:/Dropbox (MPD)/Eze Merovich/s/tipo_de_cambio.csv")
@@ -93,12 +95,10 @@ custom_stop_words <- bind_rows(stop_words,
                                data_frame(word = tm::stopwords("spanish"),
                                           lexicon = "custom"))
 
-tokens_text <- tokens_text %>%
+tokens_text <- tokens_text %>%  #fijarme si puedo hacer este join mas rapido con data.table
   anti_join(custom_stop_words)
 
-tokens_text$month2 <- as.Date(cut(tokens_text$date,
-                                  breaks = "month"))
-
+tokens_text$month2 <- floor_date(as_date(tokens_text$date), unit = "month")
 
 #test_inflacion <- tokens_text %>%
 #  filter(word %in% harvardiv_positividad$palabras) %>%            #esto lo dejo comentado porque tengo que buscar el dataset harvardiv en el disco rigido externo
@@ -110,9 +110,18 @@ tokens_text$month2 <- as.Date(cut(tokens_text$date,
 tokens_prueba <- setDT(tokens_text)
 
 test_inflacion <- tokens_prueba[word == "dólar" , .N, by = month2]
+test_inflacion <- test_inflacion[!is.na(test_inflacion$month2),] #Borro filas con na si las hay
 
 words_per_month_DT <- tokens_prueba[, .N , by = month2]
+words_per_month_DT <- words_per_month_DT[!is.na(words_per_month_DT$month2),] #Borro la ultima fila con na en la fecha
 
+###  En este chunk voy a trabajar en el metodo de imputacion para valores faltantes
+imputacion_datos_faltantantes <- function(datos){
+  #voy a tomar la columna de fechas de words_per_month_DT y voy a hacer un join con el input de la funcion
+  #despues voy a iterar por fila y donde falte un valor le voy a impuitar el valor del mes anterior
+}
+
+###
 
 words_per_month_DT <- words_per_month_DT[words_per_month_DT$month2 %in% test_inflacion$month2,] #TENGO QUE DEFINIR UN METODO DE IMPUTACION PARA VALORES FALTANTES PARA LA SERIE TEST_INFLACION
 
