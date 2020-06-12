@@ -13,7 +13,9 @@ memory.limit(size=10000)
 #clarin <- backup
 
 #tc <- read_csv("D:/Dropbox (MPD)/Eze Merovich/s/tipo_de_cambio.csv")
-harvardiv_positividad <- read_csv("D:/Dropbox (MPD)/Eze Merovich/harvardiv_positividad.csv")
+harvardiv_positividad <- read_csv("E:/s/harvardiv_positividad.csv")
+harvardiv_negatividad <- read_csv("E:/s/harvardiv_negatividad.csv")
+
 expectativas_inflacion <- openxlsx::read.xlsx("D:/Dropbox (MPD)/Eze Merovich/EI (SERIE HISTORICA).xls") #esto no funciona
 
 #clarin_unicos <- clarin_unicos_filtered
@@ -100,161 +102,61 @@ tokens_text <- tokens_text %>%  #fijarme si puedo hacer este join mas rapido con
 
 tokens_text$month2 <- floor_date(as_date(tokens_text$date), unit = "month")
 
-#test_inflacion <- tokens_text %>%
-#  filter(word %in% harvardiv_positividad$palabras) %>%            #esto lo dejo comentado porque tengo que buscar el dataset harvardiv en el disco rigido externo
-#  group_by(month2) %>%
-#  summarise(word = n())
-
-#test_inflacion <- tokens_prueba[word %in% harvardiv_positividad$palabras , .N, by = month2]
 
 tokens_prueba <- setDT(tokens_text)
 
-test_inflacion <- tokens_prueba[word == "dólar" , .N, by = month2]
-test_inflacion <- test_inflacion[!is.na(test_inflacion$month2),] #Borro filas con na si las hay
+generate_data_table <- function(dataset){
+  datos <- dataset[, .N , by = month2]
+  datos <- datos[!is.na(datos$month2),] #Borro la ultima fila con na en la fecha
+}
 
-words_per_month_DT <- tokens_prueba[, .N , by = month2]
-words_per_month_DT <- words_per_month_DT[!is.na(words_per_month_DT$month2),] #Borro la ultima fila con na en la fecha
+words_per_month_DT <- generate_data_table(tokens_prueba)
 
-###  En este chunk voy a trabajar en el metodo de imputacion para valores faltantes
-imputacion_datos_faltantantes <- function(datos){
-  #voy a tomar la columna de fechas de words_per_month_DT y voy a hacer un join con el input de la funcion
-  #despues voy a iterar por fila y donde falte un valor le voy a impuitar el valor del mes anterior
+###  Esta funcion imputa datos faltantes en la serie que resulta de la query de una palabra
+imputacion_datos_faltantantes <- function(datos, referencia){  #Le tengo que agregar una parte ad hoc para corregir el valor de principios de 2010
+  datos_output <- left_join(referencia[,1], datos, by="month2")
+  for(i in seq_along(datos_output$N)){
+    if(i==1 && is.na(datos_output[1,2])){
+      datos_output[1,2] <- 0
+    }
+    if(is.na(datos_output[i,2])){
+      datos_output[i,2] <- datos_output[i-1,2]
+    }
+  }
+  return(datos_output)
+}
+
+###  Esta funcion me devuelve una serie normalizada a partir de la palabra que quiera buscar
+
+get_normalized_series <- function(palabra, dataset, referencia){
+  output <- dataset[word == palabra , .N, by = month2]
+  output <- output[!is.na(output$month2),]
+  output <- imputacion_datos_faltantantes(output, referencia)
+  output$cantidad_total_palabras <- referencia$N
+  output$relative_frequency <- output$N/output$cantidad_total_palabras
+  output$normalizado <-  (output$relative_frequency - mean(output$relative_frequency))/sd(output$relative_frequency)
+  return(output[,c(1,5)])
 }
 
 ###
 
-words_per_month_DT <- words_per_month_DT[words_per_month_DT$month2 %in% test_inflacion$month2,] #TENGO QUE DEFINIR UN METODO DE IMPUTACION PARA VALORES FALTANTES PARA LA SERIE TEST_INFLACION
-
-test_inflacion$cantidad_total_palabras <- words_per_month_DT$N
-
-test_inflacion$relative_frequency <- test_inflacion$N/test_inflacion$cantidad_total_palabras
-
-test_inflacion$normalizado <- (test_inflacion$relative_frequency - mean(test_inflacion$relative_frequency))/sd(test_inflacion$relative_frequency)
-
+test_inflacion <- get_normalized_series("inflación", tokens_prueba, words_per_month_DT)
 ggplot(data = test_inflacion, mapping = aes(month2, normalizado)) + geom_line()
 
-############################################33
-
-test_dolar_10 <- tokens_text %>%
-  filter(word %in% dolar_10) %>%
-  group_by(month2) %>%
-  summarise(word = n())
-
-#test_grouped_by_month <- tokens_text %>%
-#  filter(word == "dólar") %>%
-#  group_by(month2) %>%
-#  summarise(word = n())
-
-words_per_month <- tokens_text %>%
-  group_by(month2) %>%
-  summarise(word = n())
-
-words_per_month <- words_per_month[words_per_month$month2 %in% test_dolar_10$month2,]
-
-#words_per_month <- words_per_month %>%
-#  filter(month2 != "2014-07-01")
+###########  Ahora viene la parte de analisis de sentmiento
 
 
+test_inflacion_positividad_DT <- tokens_prueba[word %in% harvardiv_positividad$palabras , .N, by = month2]
+test_inflacion_negatividad_DT <- tokens_prueba[word %in% harvardiv_negatividad$palabras , .N, by = month2]
 
-test_dolar_10$cantidad_total_palabras <- words_per_month$word
+sentimiento <- test_inflacion_positividad_DT
+sentimiento$N <- test_inflacion_positividad_DT$N-test_inflacion_negatividad_DT$N
+sentimiento <- sentimiento[!is.na(sentimiento$month2),]
 
-test_dolar_10$relative_frequency <- test_dolar_10$word/test_dolar_10$cantidad_total_palabras
+output <- sentimiento
+output$cantidad_total_palabras <- words_per_month_DT$N
+output$relative_frequency <- output$N/output$cantidad_total_palabras
+output$normalizado <-  (output$relative_frequency - mean(output$relative_frequency))/sd(output$relative_frequency)
+output <- (output[,c(1,5)])
 
-test_dolar_10$normalizado <- (test_dolar_10$relative_frequency - mean(test_dolar_10$relative_frequency))/sd(test_dolar_10$relative_frequency)
-
-#mean(dolar_normalizado)
-#sd(dolar_normalizado)
-
-ggplot() + 
-  geom_line(data = test_inflacion, mapping = aes(month2, normalizado), color = "blue") + 
-  geom_line(data = test_dolar_10, mapping = aes(month2, normalizado), color = "red")
-
-
-#############################################33
-
-
-
-
-test <- test[2:nrow(test),]
-
-test  %>%
-  ggplot(aes(x = date, y = word, group = 1)) +
-  geom_line() +
-  theme(axis.text.x = element_text(angle = 90)) +
-  scale_x_date(date_breaks = "1 month", date_labels = "%b %d %y") +
-  ggtitle("Numero de occurencias de la palabra 'dólar' en el diario El Economista (01/01/2018 a 15/08/2019)") +
-  labs (x="Fecha",y="ocurrencia de la palabra 'dólar'")
-
-
-tc$fecha <-  as.Date(as.character(tc$fecha), format="%d/%m/%Y")
-
-tc <- tc %>%
-  filter(fecha %in% test$date)
-
-p1 <- tc %>%
-  ggplot(aes(x = fecha, y = tc, group = 1)) +
-  geom_line() +
-  theme(axis.text.x = element_text(angle = 90)) +
-  scale_x_date(date_breaks = "1 week", date_labels = "%b %d %y") +
-  ggtitle("Tipo de cambio USD-ARS (01/01/2018 a 15/08/2019)") +
-  labs (x="Fecha",y="Tipo de cambio")
-
- 
-p2 <- test  %>%
-  ggplot(aes(x = date, y = word, group = 1)) +
-  geom_line() +
-  theme(axis.text.x = element_text(angle = 90)) +
-  scale_x_date(date_breaks = "1 week", date_labels = "%b %d %y") +
-  ggtitle("Numero de occurencias de la palabra 'dólar' en el diario El Economista (01/01/2018 a 15/08/2019)") +
-  labs (x="Fecha",y="ocurrencia de la palabra 'dólar'")
-
-grid.arrange(p1, p2, nrow = 2)
-  
-tokens_text %>%
-  filter(word == "dólar") %>%
-  group_by(date) %>%
-  summarise(word = n()) %>%
-  ggplot(aes(x = date, y = word, group = 1)) +
-  geom_line() +
-  theme(axis.text.x = element_text(angle = 90)) +
-  scale_x_date(date_breaks = "1 week", date_labels = "%b %d %y")
-
-#grafico inflacion
-
-
-inflacion_por_mes <- tokens_text %>%
-  filter(word == "inflación") %>%
-  #filter(year == 2019) %>%
-  group_by(month2) %>%
-  summarise(word = n()) 
-
-inflacion_por_mes %>%
-  #rename("month"="as.factor(month)") %>%
-  ggplot(aes(x = month2, y = word, group=1)) +
-  geom_line() +
-  geom_point()
-
-
-inflacion_por_mes[,3] <- inflacion_por_mes[,2]/articulos_por_mes[1:(nrow(articulos_por_mes)),2]
-
-inflacion_por_mes <- inflacion_por_mes %>%
-  rename(infla_ajustada = word.1)
-
-inflacion_por_mes %>%  #
-  #rename("month"="as.factor(month)") %>%
-  ggplot(aes(x = month2, y = word, group=1)) +
-  geom_line() +
-  geom_point()
-
-
-inflacion_por_mes %>%  #ACA ESTOY GRAFICANDO LA INFLACION PONDERADA POR EL NUMERO DE ARTICULOS POR MES. EL PROBLEMA ES QUE EL NUMERO DE ARTICULOS CRECE MUCHO EN LOS ULTIMOS TRES AÑOS
-  #rename("month"="as.factor(month)") %>%
-  ggplot(aes(x = month2, y = infla_ajustada, group=1)) +
-  geom_line() +
-  geom_point()
-
-articulos_por_mes %>%
-  #rename("month"="as.factor(month)") %>%
-  ggplot(aes(x = month, y = count, group=1)) +
-  geom_line() +
-  geom_point()
+ggplot(data = output, mapping = aes(month2, normalizado)) + geom_line()
