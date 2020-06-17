@@ -111,6 +111,9 @@ generate_data_table <- function(dataset){
 }
 
 words_per_month_DT <- generate_data_table(tokens_prueba)
+words_per_month_DT[74,2] <- words_per_month_DT[73,2] #Esta linea y la siguiente son un cambio ligeramente ad hoc
+words_per_month_DT[75,2] <- words_per_month_DT[76,2] #Lo hago porque para estos dos meses hay varios articulos que en el cuerpo dicen tan solo "COMENTARIOS". Esto hace que la cantidad total de palabras en estos dos meses sea mucho mas chica y cuando divido por estas cantidades para generar la serie normalizada el valor en estos dos meses me queda mucho mas grande (el calculo da un aumento de 10 desviaciones estandar) 
+words_per_month_DT[16,2] <- (words_per_month_DT[15,2]+words_per_month_DT[17,2])/2
 
 ###  Esta funcion imputa datos faltantes en la serie que resulta de la query de una palabra
 imputacion_datos_faltantantes <- function(datos, referencia){  #Le tengo que agregar una parte ad hoc para corregir el valor de principios de 2010
@@ -126,21 +129,26 @@ imputacion_datos_faltantantes <- function(datos, referencia){  #Le tengo que agr
   return(datos_output)
 }
 
+
 ###  Esta funcion me devuelve una serie normalizada a partir de la palabra que quiera buscar
 
 get_normalized_series <- function(palabra, dataset, referencia){
   output <- dataset[word == palabra , .N, by = month2]
   output <- output[!is.na(output$month2),]
   output <- imputacion_datos_faltantantes(output, referencia)
+  for(i in 133:136){
+    output[i,2] <- 0.7*output[i-12,2]+0.3*output[i,2]  #esto lo hago porque para enero-abril de 2010 tengo una cantidad desproporcionada de articulos de la seccion de economia y eso hace que me tire para arriba la cuenta de palabras.
+  } #En otras partes lo que hice fue tomar el valor del mes siguiente. Aca no puedo hacer eso porque son cuatro meses consecutivos. Lo que hago es mirar el valor para el mismo mes del año anterior (o sea doce meses atras) y asignar un promedio ponderado donde le asigno un peso del 70% a al valor del año pasado y un peso del 30% al del 2010. Esto valores son ad-hoc 
   output$cantidad_total_palabras <- referencia$N
   output$relative_frequency <- output$N/output$cantidad_total_palabras
   output$normalizado <-  (output$relative_frequency - mean(output$relative_frequency))/sd(output$relative_frequency)
-  return(output[,c(1,5)])
+  return(output[,c(1,5)]) #[,c(1,5)]
 }
 
 ###
 
 test_inflacion <- get_normalized_series("inflación", tokens_prueba, words_per_month_DT)
+
 ggplot(data = test_inflacion, mapping = aes(month2, normalizado)) + geom_line()
 
 ###########  Ahora viene la parte de analisis de sentmiento
