@@ -7,6 +7,7 @@ library(lubridate)
 library(gridExtra)
 library(stringr)
 library(data.table)
+library(readxl)
 
 memory.limit(size=10000)
 
@@ -15,8 +16,17 @@ memory.limit(size=10000)
 #tc <- read_csv("D:/Dropbox (MPD)/Eze Merovich/s/tipo_de_cambio.csv")
 harvardiv_positividad <- read_csv("E:/s/harvardiv_positividad.csv")
 harvardiv_negatividad <- read_csv("E:/s/harvardiv_negatividad.csv")
+inflacion_argentina <- read_csv("E:/s/Inflacion_Argentina_1999_2019_BCRA.csv")
+str(inflacion_argentina)
+inflacion_argentina <- rbind(inflacion_argentina, c("30/09/2019", "5,9"))
+inflacion_argentina$inflacion_mensual <- as.numeric(str_replace(inflacion_argentina$inflacion_mensual, ",", ".")
+)
+inflacion_argentina$mes <- as.Date(inflacion_argentina$mes, format="%d/%m/%Y")
+inflacion_argentina$mes <- floor_date(as_date(inflacion_argentina$mes), unit = "month") #as.Date(inflacion_argentina$mes, format="%d/%m/%Y")
 
-expectativas_inflacion <- openxlsx::read.xlsx("D:/Dropbox (MPD)/Eze Merovich/EI (SERIE HISTORICA).xls") #esto no funciona
+ggplot(inflacion_argentina, mapping = aes(mes, inflacion_mensual)) + geom_line()
+
+expectativas_inflacion <- read_excel("E:/s/EI (SERIE HISTORICA).xls") 
 
 #clarin_unicos <- clarin_unicos_filtered
 backup <- clarin
