@@ -1,4 +1,5 @@
 #library(tidyverse)
+
 library(tidytext)
 library(dplyr)
 library(tm)
@@ -8,6 +9,7 @@ library(gridExtra)
 library(stringr)
 library(data.table)
 library(readxl)
+library(patchwork)
 
 memory.limit(size=10000)
 
@@ -24,7 +26,8 @@ inflacion_argentina$inflacion_mensual <- as.numeric(str_replace(inflacion_argent
 inflacion_argentina$mes <- as.Date(inflacion_argentina$mes, format="%d/%m/%Y")
 inflacion_argentina$mes <- floor_date(as_date(inflacion_argentina$mes), unit = "month") #as.Date(inflacion_argentina$mes, format="%d/%m/%Y")
 
-ggplot(inflacion_argentina, mapping = aes(mes, inflacion_mensual)) + geom_line()
+p3 <- ggplot(inflacion_argentina, mapping = aes(mes, inflacion_mensual)) + geom_line()+
+  ggtitle('Inflación mensual en Argentina')
 
 expectativas_inflacion <- read_excel("E:/s/EI (SERIE HISTORICA).xls") 
 
@@ -97,7 +100,8 @@ text_df <- as_tibble(text_df)
 articulos_por_mes <- text_df %>% group_by(month = floor_date(date,"month")) %>%   #reescribir esto con data.table
   summarize(count = n())
 
-ggplot(data = articulos_por_mes, mapping = aes(month, count)) + geom_line()
+ggplot(data = articulos_por_mes, mapping = aes(month, count)) + geom_line()+
+  ggtitle('Inflacion mensual')
 
 #Obtengo los tokens a partir del texto en el Cuerpo de las noticias
 tokens_text <- select(text_df, Cuerpo, date) %>%
@@ -159,7 +163,7 @@ get_normalized_series <- function(palabra, dataset, referencia){
 
 test_inflacion <- get_normalized_series("inflación", tokens_prueba, words_per_month_DT)
 
-ggplot(data = test_inflacion, mapping = aes(month2, normalizado)) + geom_line()
+p1 <- ggplot(data = test_inflacion, mapping = aes(month2, normalizado)) + geom_line() + ggtitle('Frecuencia relativa normalziada de la palabra inflacion')
 
 ###########  Ahora viene la parte de analisis de sentmiento
 
@@ -177,4 +181,7 @@ output$relative_frequency <- output$N/output$cantidad_total_palabras
 output$normalizado <-  (output$relative_frequency - mean(output$relative_frequency))/sd(output$relative_frequency)
 output <- (output[,c(1,5)])
 
-ggplot(data = output, mapping = aes(month2, normalizado)) + geom_line()
+p2 <- ggplot(data = output, mapping = aes(month2, normalizado)) + geom_line() +
+  ggtitle('Sentiment index')
+
+p1 / p2 / p3
