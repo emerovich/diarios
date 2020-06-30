@@ -1,9 +1,17 @@
 #Tengo que haber corrido procesa_texto_clarin para correr este programa
 #Las series son inflacion_argentina, test_inflacion y sentimiento
+getwd()
+
+
 library(car)
 library(stargazer)
 
+typeof(indice_atencion)
+typeof(test_glove_10)
+
 indice_atencion <- test_inflacion
+indice_atencion_glove_10 <- test_glove_10
+indice_atencion_glove_50 <- test_glove_50
 sentimiento <- output
 
 inflacion <- inflacion_argentina
@@ -16,10 +24,11 @@ nrow(indice_atencion)
 nrow(sentimiento)
 
 #Genero las series correspondientes a los distintos rezagos
-typeof(indice_atencion_un_rezago)
+
 indice_atencion_un_rezago <- indice_atencion[3:nrow(indice_atencion),2]
 indice_atencion_dos_rezagos <- indice_atencion[(2:(nrow(indice_atencion)-1)),2]
 indice_atencion_tres_rezagos <- indice_atencion[(1:(nrow(indice_atencion)-2)),2]
+typeof(indice_atencion_un_rezago)
 
 indice_atencion_un_rezago <- indice_atencion_un_rezago[-1]
 indice_atencion_dos_rezagos <- indice_atencion_dos_rezagos[-1]
@@ -120,3 +129,96 @@ modelo6 <- lm(indice_atencion_var_explicada ~ indice_atencion_un_rezago + indice
                 indice_atencion_tres_rezagos)
 
 stargazer(list(modelo4, modelo5, modelo6), type="text", keep.stat = c("n","rsq", "adj.rsq", "f"), out = "tabla2.htm")
+
+###REpito las regresiones del modelo 1 con los indices de atencion hechos con glove 10
+
+indice_atencion_glove_10_un_rezago <- indice_atencion_glove_10[3:nrow(indice_atencion_glove_10),2]
+indice_atencion_glove_10_dos_rezagos <- indice_atencion_glove_10[(2:(nrow(indice_atencion_glove_10)-1)),2]
+indice_atencion_glove_10_tres_rezagos <- indice_atencion_glove_10[(1:(nrow(indice_atencion_glove_10)-2)),2]
+
+indice_atencion_glove_10_un_rezago <- indice_atencion_glove_10_un_rezago[-1]
+indice_atencion_glove_10_dos_rezagos <- indice_atencion_glove_10_dos_rezagos[-1]
+indice_atencion_glove_10_tres_rezagos <- indice_atencion_glove_10_tres_rezagos[-1]
+
+indice_atencion_glove_10_un_rezago <- as.vector(unlist(indice_atencion_glove_10_un_rezago))
+indice_atencion_glove_10_dos_rezagos <- as.vector(unlist(indice_atencion_glove_10_dos_rezagos))
+indice_atencion_glove_10_tres_rezagos <- as.vector(unlist(indice_atencion_glove_10_tres_rezagos))
+
+modelo7 <- lm(inflacion_var_explicada ~ inflacion_un_rezago + inflacion_dos_rezagos +
+               inflacion_tres_rezagos + indice_atencion_glove_10_un_rezago + indice_atencion_glove_10_dos_rezagos + 
+               indice_atencion_glove_10_tres_rezagos + sentimiento_un_rezago + sentimiento_dos_rezagos + 
+               sentimiento_tres_rezagos)
+
+summary(modelo7)
+
+###REpito las regresiones del modelo 1 con los indices de atencion hechos con glove 50
+
+indice_atencion_glove_50_un_rezago <- indice_atencion_glove_50[3:nrow(indice_atencion_glove_50),2]
+indice_atencion_glove_50_dos_rezagos <- indice_atencion_glove_50[(2:(nrow(indice_atencion_glove_50)-1)),2]
+indice_atencion_glove_50_tres_rezagos <- indice_atencion_glove_50[(1:(nrow(indice_atencion_glove_50)-2)),2]
+
+indice_atencion_glove_50_un_rezago <- indice_atencion_glove_50_un_rezago[-1]
+indice_atencion_glove_50_dos_rezagos <- indice_atencion_glove_50_dos_rezagos[-1]
+indice_atencion_glove_50_tres_rezagos <- indice_atencion_glove_50_tres_rezagos[-1]
+
+indice_atencion_glove_50_un_rezago <- as.vector(unlist(indice_atencion_glove_50_un_rezago))
+indice_atencion_glove_50_dos_rezagos <- as.vector(unlist(indice_atencion_glove_50_dos_rezagos))
+indice_atencion_glove_50_tres_rezagos <- as.vector(unlist(indice_atencion_glove_50_tres_rezagos))
+
+modelo8 <- lm(inflacion_var_explicada ~ inflacion_un_rezago + inflacion_dos_rezagos +
+                inflacion_tres_rezagos + indice_atencion_glove_50_un_rezago + indice_atencion_glove_50_dos_rezagos + 
+                indice_atencion_glove_50_tres_rezagos + sentimiento_un_rezago + sentimiento_dos_rezagos + 
+                sentimiento_tres_rezagos)
+
+summary(modelo8)
+
+
+stargazer(list(modelo7, modelo8), type="text", keep.stat = c("n","rsq", "adj.rsq", "f"), out = "tabla3.htm")
+
+
+### Repito las regresiones del modelo 4 con glove 10
+
+### MODELO CON INDICE DE ATENCION COMO VARIABLE EXPLICADA
+
+indice_atencion_glove_10_var_explicada <- indice_atencion_glove_10[4:nrow(indice_atencion),2]
+
+indice_atencion_glove_10_un_rezago <- indice_atencion_glove_10[(3:(nrow(indice_atencion_glove_10)-1)),2]
+indice_atencion_glove_10_dos_rezagos <- indice_atencion_glove_10[(2:(nrow(indice_atencion_glove_10)-2)),2]
+indice_atencion_glove_10_tres_rezagos <- indice_atencion_glove_10[(1:(nrow(indice_atencion_glove_10)-3)),2]
+
+indice_atencion_glove_10_un_rezago <- as.vector(unlist(indice_atencion_glove_10_un_rezago))
+indice_atencion_glove_10_dos_rezagos <- as.vector(unlist(indice_atencion_glove_10_dos_rezagos))
+indice_atencion_glove_10_tres_rezagos <- as.vector(unlist(indice_atencion_glove_10_tres_rezagos))
+indice_atencion_glove_10_var_explicada <- as.vector(unlist(indice_atencion_glove_10_var_explicada))
+
+modelo9 <- lm(indice_atencion_glove_10_var_explicada ~ inflacion_un_rezago + inflacion_dos_rezagos +
+                inflacion_tres_rezagos + indice_atencion_glove_10_un_rezago + indice_atencion_glove_10_dos_rezagos + 
+                indice_atencion_glove_10_tres_rezagos + sentimiento_un_rezago + sentimiento_dos_rezagos + 
+                sentimiento_tres_rezagos)
+
+summary(modelo9)
+
+
+### Repito las regresiones del modelo 4 con glove 50
+
+### MODELO CON INDICE DE ATENCION COMO VARIABLE EXPLICADA
+
+indice_atencion_glove_50_var_explicada <- indice_atencion_glove_50[4:nrow(indice_atencion),2]
+
+indice_atencion_glove_50_un_rezago <- indice_atencion_glove_50[(3:(nrow(indice_atencion_glove_50)-1)),2]
+indice_atencion_glove_50_dos_rezagos <- indice_atencion_glove_50[(2:(nrow(indice_atencion_glove_50)-2)),2]
+indice_atencion_glove_50_tres_rezagos <- indice_atencion_glove_50[(1:(nrow(indice_atencion_glove_50)-3)),2]
+
+indice_atencion_glove_50_un_rezago <- as.vector(unlist(indice_atencion_glove_50_un_rezago))
+indice_atencion_glove_50_dos_rezagos <- as.vector(unlist(indice_atencion_glove_50_dos_rezagos))
+indice_atencion_glove_50_tres_rezagos <- as.vector(unlist(indice_atencion_glove_50_tres_rezagos))
+indice_atencion_glove_50_var_explicada <- as.vector(unlist(indice_atencion_glove_50_var_explicada))
+
+modelo10 <- lm(indice_atencion_glove_50_var_explicada ~ inflacion_un_rezago + inflacion_dos_rezagos +
+                inflacion_tres_rezagos + indice_atencion_glove_50_un_rezago + indice_atencion_glove_50_dos_rezagos + 
+                indice_atencion_glove_50_tres_rezagos + sentimiento_un_rezago + sentimiento_dos_rezagos + 
+                sentimiento_tres_rezagos)
+
+summary(modelo10)
+
+stargazer(list(modelo9, modelo10), type="text", keep.stat = c("n","rsq", "adj.rsq", "f"), out = "tabla4.htm")
