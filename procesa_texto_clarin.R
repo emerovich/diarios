@@ -19,6 +19,9 @@ memory.limit(size=10000)
 harvardiv_positividad <- read_csv("E:/s/harvardiv_positividad.csv")
 harvardiv_negatividad <- read_csv("E:/s/harvardiv_negatividad.csv")
 inflacion_argentina <- read_csv("E:/s/Inflacion_Argentina_1999_2019_BCRA.csv")
+glove_infla_10 <- read_csv("E:/s/Glove_infla_10 - Sheet1.csv")
+glove_infla_50 <- read_csv("E:/s/Glove_infla_50 - Sheet1.csv")
+
 str(inflacion_argentina)
 inflacion_argentina <- rbind(inflacion_argentina, c("30/09/2019", "5,9"))
 inflacion_argentina$inflacion_mensual <- as.numeric(str_replace(inflacion_argentina$inflacion_mensual, ",", ".")
@@ -163,8 +166,14 @@ get_normalized_series <- function(palabra, dataset, referencia){
 
 test_inflacion <- get_normalized_series("inflación", tokens_prueba, words_per_month_DT)
 
-p1 <- ggplot(data = test_inflacion, mapping = aes(month2, normalizado)) + geom_line() + ggtitle('Frecuencia relativa normalziada de la palabra inflacion')
+p1 <- ggplot(data = test_inflacion, mapping = aes(month2, normalizado)) +
+  geom_line() +
+  ggtitle("Frecuencia relativa normalizada") +
+  labs(x = "Año", y = "Frecuencia", subtitle = "Para la palabra 'inflación'")
+p1
+ggsave("serie_atencion.png", p1)
 
+setwd("E:/s")
 ###########  Ahora viene la parte de analisis de sentmiento
 
 
@@ -182,6 +191,29 @@ output$normalizado <-  (output$relative_frequency - mean(output$relative_frequen
 output <- (output[,c(1,5)])
 
 p2 <- ggplot(data = output, mapping = aes(month2, normalizado)) + geom_line() +
-  ggtitle('Sentiment index')
+  ggtitle('Índice de sentimiento') +
+  labs(x = "Año", y="Frecuencia") 
+p2
+
+ggsave("serie_sentimiento.png", p2)
 
 p1 / p2 / p3
+
+#Genero serie normalizada para glove_10 y glove_50. Tengo que escribir una funcion para hacer la parte de sentimiento
+# y de glove con esa funcion
+
+test_glove_10 <- tokens_prueba[word %in% glove_infla_10$Palabra , .N, by = month2]
+test_glove_50 <- tokens_prueba[word %in% glove_infla_50$Palabra , .N, by = month2]
+test_glove_10 <- test_glove_10[!is.na(test_glove_10$month2),]
+test_glove_50 <- test_glove_50[!is.na(test_glove_50$month2),]
+
+
+test_glove_10$cantidad_total_palabras <- words_per_month_DT$N
+test_glove_10$relative_frequency <- test_glove_10$N/test_glove_10$cantidad_total_palabras
+test_glove_10$normalizado <-  (test_glove_10$relative_frequency - mean(test_glove_10$relative_frequency))/sd(test_glove_10$relative_frequency)
+test_glove_10 <- (test_glove_10[,c(1,5)])
+
+test_glove_50$cantidad_total_palabras <- words_per_month_DT$N
+test_glove_50$relative_frequency <- test_glove_50$N/test_glove_50$cantidad_total_palabras
+test_glove_50$normalizado <-  (test_glove_50$relative_frequency - mean(test_glove_50$relative_frequency))/sd(test_glove_50$relative_frequency)
+test_glove_50 <- (test_glove_50[,c(1,5)])
