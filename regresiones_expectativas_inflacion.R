@@ -23,7 +23,7 @@ expectativas_inflacion
 
 p5 <- ggplot(data = expectativas_inflacion, mapping = aes(Fecha, Media))+
   geom_line() +
-  ggtitle("Expectativas de Inflación Anual en Argentina (2006-2019)")
+  ggtitle("Expectativas de InflaciÃ³n Anual en Argentina (2006-2019)")
 p5
 
 ggsave("grafico_expectativas_inflacion.png", p5)
@@ -147,3 +147,70 @@ modelo12 <- lm(Media ~ indice_atencion_un_rezago_positividad + indice_atencion_u
                  inflacion_dos_rezagos_negatividad + inflacion_tres_rezagos_positividad + inflacion_tres_rezagos_negatividad, datos_modelo_12)
 
 summary(modelo12)
+
+
+
+
+#####################
+
+
+#Quiero modelar el sentimiento como una dummy
+
+datos_modelo_13 <- data.frame(expectativas_inflacion[,3], indice_atencion_un_rezago,
+                              indice_atencion_dos_rezagos, indice_atencion_tres_rezagos,
+                              inflacion_un_rezago, inflacion_dos_rezagos, inflacion_tres_rezagos,
+                              sentimiento_un_rezago, sentimiento_dos_rezagos, sentimiento_tres_rezagos)
+
+inflacion_one_sd <- mean(datos_modelo_13$inflacion_un_rezago)
+
+for(i in 1:158){
+  if(datos_modelo_13[i,5]>inflacion_one_sd){
+    datos_modelo_13[i,5] <- 1
+  }
+  else{
+    datos_modelo_13[i,5] <- 0
+  }
+  if(datos_modelo_13[i,6]>inflacion_one_sd){
+    datos_modelo_13[i,6] <- 1
+  }
+  else{
+    datos_modelo_13[i,6] <- 0
+  }
+  if(datos_modelo_13[i,7]>inflacion_one_sd){
+    datos_modelo_13[i,7] <- 1
+  }
+  else{
+    datos_modelo_13[i,7] <- 0
+  }
+}
+
+datos_modelo_13$indice_atencion_un_rezago_alta_inflacion <- datos_modelo_13$indice_atencion_un_rezago*datos_modelo_13$inflacion_un_rezago
+datos_modelo_13$indice_atencion_un_rezago_baja_inflacion <- datos_modelo_13$indice_atencion_un_rezago*(1-datos_modelo_13$inflacion_un_rezago)
+
+datos_modelo_13$indice_atencion_dos_rezagos_alta_inflacion <- datos_modelo_13$indice_atencion_dos_rezagos*(datos_modelo_13$inflacion_dos_rezagos)
+datos_modelo_13$indice_atencion_dos_rezagos_baja_inflacion <- datos_modelo_13$indice_atencion_dos_rezagos*(1-datos_modelo_13$inflacion_dos_rezagos)
+
+datos_modelo_13$indice_atencion_tres_rezagos_alta_inflacion <- datos_modelo_13$indice_atencion_tres_rezagos*(datos_modelo_13$inflacion_tres_rezagos)
+datos_modelo_13$indice_atencion_tres_rezagos_baja_inflacion <- datos_modelo_13$indice_atencion_tres_rezagos*(1-datos_modelo_13$inflacion_tres_rezagos)
+
+datos_modelo_13$sentimiento_un_rezago_alta_inflacion <- datos_modelo_13$sentimiento_un_rezago*datos_modelo_13$inflacion_un_rezago
+datos_modelo_13$sentimiento_un_rezago_baja_inflacion <- datos_modelo_13$sentimiento_un_rezago*(1-datos_modelo_13$inflacion_un_rezago)
+
+datos_modelo_13$sentimiento_dos_rezagos_alta_inflacion <- datos_modelo_13$sentimiento_dos_rezagos*datos_modelo_13$inflacion_dos_rezagos
+datos_modelo_13$sentimiento_dos_rezagos_baja_inflacion <- datos_modelo_13$sentimiento_dos_rezagos*(1-datos_modelo_13$inflacion_dos_rezagos)
+
+datos_modelo_13$sentimiento_tres_rezagos_alta_inflacion <- datos_modelo_13$sentimiento_tres_rezagos*datos_modelo_13$inflacion_tres_rezagos
+datos_modelo_13$sentimiento_tres_rezagos_baja_inflacion <- datos_modelo_13$sentimiento_tres_rezagos*(1-datos_modelo_13$inflacion_tres_rezagos)
+
+modelo13 <- lm(Media ~ indice_atencion_un_rezago_alta_inflacion + indice_atencion_un_rezago_baja_inflacion +
+                 indice_atencion_dos_rezagos_alta_inflacion+
+                 indice_atencion_dos_rezagos_baja_inflacion + indice_atencion_tres_rezagos_alta_inflacion + 
+                 indice_atencion_tres_rezagos_baja_inflacion+
+                 sentimiento_un_rezago_alta_inflacion + sentimiento_un_rezago_baja_inflacion + 
+                 sentimiento_dos_rezagos_alta_inflacion + 
+                 sentimiento_dos_rezagos_baja_inflacion + sentimiento_tres_rezagos_alta_inflacion + 
+                 sentimiento_tres_rezagos_baja_inflacion, datos_modelo_13)
+
+summary(modelo13)
+
+stargazer(modelo13, type="text", keep.stat = c("n","rsq", "adj.rsq", "f"), out = "tabla13.htm")
